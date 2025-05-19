@@ -75,6 +75,10 @@ public:
     Color operator/(float v) const { return Color(m_r/v, m_g/v, m_b/v, m_a/v); }
 
     Color& operator=(uint32_t rgba) { setRGBA(rgba); return *this; }
+
+    static void getSaturationAndIntensity(int row, float &saturation, float &intensity);
+    static void HSVToRGB(float hue, float saturation, float intensity, float &r, float &g, float &b);
+
     
     Color operator+=(const Color& other) const { 
         return Color(std::min<float>(1.0f, m_r + other.m_r), std::min<float>(1.0f, m_g + other.m_g),

@@ -21,6 +21,7 @@
  */
 
 #include "color.h"
+#include <cmath>
 
 // NOTE: AABBGGRR order
 const Color Color::alpha      = 0x00000000U;
@@ -49,92 +50,79 @@ Color::Color(const std::string& coltext)
     ss >> *this;
 }
 
-Color Color::getOutfitColor(int color)
-{
-    static const int HSI_SI_VALUES = 7;
-    static const int HSI_H_STEPS = 19;
+void Color::getSaturationAndIntensity(int row, float &saturation, float &intensity) {
+    // Define saturation and intensity values for each row
+    static const float saturationValues[] = { 0.15f, 0.25f, 0.25f, 0.50f, 0.75f, 1.0f, 1.0f, 1.0f };
+    static const float intensityValues[] = { 1.0f, 1.0f, 0.75f, 0.75f, 0.75f, 1.0f, 0.75f, 0.50f };
 
-    if (color >= HSI_H_STEPS * HSI_SI_VALUES)
-        color = 0;
+    // Check if row is within bounds
+    if (row >= 0 && row < 8) {
+        saturation = saturationValues[row];
+        intensity = intensityValues[row];
+    } else {
+        // Default to row 7 (maximum saturation, lower intensity)
+        saturation = 1.0f;
+        intensity = 0.50f;
+    }
 
-    float loc1 = 0, loc2 = 0, loc3 = 0;
-    if (color % HSI_H_STEPS != 0) {
-        loc1 = color % HSI_H_STEPS * 1.0 / 18.0;
-        loc2 = 1;
-        loc3 = 1;
+    // Ensure rows 4 or 5 are fully saturated (e.g., red = 255,0,0, cyan = 255,255,0)
+    if (row == 4 || row == 5) {
+        saturation = 1.0f;
+        intensity = 1.0f;
+    }
+}
 
-        switch (int(color / HSI_H_STEPS)) {
-        case 0:
-            loc2 = 0.25;
-            loc3 = 1.00;
-            break;
-        case 1:
-            loc2 = 0.25;
-            loc3 = 0.75;
-            break;
-        case 2:
-            loc2 = 0.50;
-            loc3 = 0.75;
-            break;
-        case 3:
-            loc2 = 0.667;
-            loc3 = 0.75;
-            break;
-        case 4:
-            loc2 = 1.00;
-            loc3 = 1.00;
-            break;
-        case 5:
-            loc2 = 1.00;
-            loc3 = 0.75;
-            break;
-        case 6:
-            loc2 = 1.00;
-            loc3 = 0.50;
-            break;
+void Color::HSVToRGB(float hue, float saturation, float intensity, float &r, float &g, float &b) {
+    if (saturation == 0.0f) {
+        r = g = b = intensity; // Grayscale
+    } else {
+        float sector = hue * 6.0f; // Which sector of the color wheel
+        int i = static_cast<int>(sector);
+        float f = sector - i;
+        float p = intensity * (1.0f - saturation);
+        float q = intensity * (1.0f - f * saturation);
+        float t = intensity * (1.0f - (1.0f - f) * saturation);
+
+        switch (i) {
+            case 0: r = intensity; g = t; b = p; break;
+            case 1: r = q; g = intensity; b = p; break;
+            case 2: r = p; g = intensity; b = t; break;
+            case 3: r = p; g = q; b = intensity; break;
+            case 4: r = t; g = p; b = intensity; break;
+            case 5: r = intensity; g = p; b = q; break;
         }
-    } else {
-        loc1 = 0;
-        loc2 = 0;
-        loc3 = 1 - (float)color / HSI_H_STEPS / (float)HSI_SI_VALUES;
+    }
+}
+
+Color Color::getOutfitColor(int color) {
+    if (color < 0) color = 0;
+    if (color > 255) color = 255;
+
+    const int stepsPerColumn = 32;
+    int column = color % stepsPerColumn;
+    int row = color / stepsPerColumn;
+
+    float hue = column / 31.0f; // Full hue cycle over 32 steps
+
+    // Define saturation and intensity based on row
+    float saturation, intensity;
+    getSaturationAndIntensity(row, saturation, intensity);
+
+    // Handle greyscale column
+    if (column == 0) {
+        int grayValue = 255 - (row * (255 / 7));
+        return Color(grayValue, grayValue, grayValue);
     }
 
-    if (loc3 == 0)
-        return Color(0, 0, 0);
+    // Convert from HSV to RGB
+    float r = 0, g = 0, b = 0;
+    HSVToRGB(hue, saturation, intensity, r, g, b);
 
-    if (loc2 == 0) {
-        int loc7 = int(loc3 * 255);
-        return Color(loc7, loc7, loc7);
-    }
-
-    float red = 0, green = 0, blue = 0;
-
-    if (loc1 < 1.0 / 6.0) {
-        red = loc3;
-        blue = loc3 * (1 - loc2);
-        green = blue + (loc3 - blue) * 6 * loc1;
-    } else if (loc1 < 2.0 / 6.0) {
-        green = loc3;
-        blue = loc3 * (1 - loc2);
-        red = green - (loc3 - blue) * (6 * loc1 - 1);
-    } else if (loc1 < 3.0 / 6.0) {
-        green = loc3;
-        red = loc3 * (1 - loc2);
-        blue = red + (loc3 - red) * (6 * loc1 - 2);
-    } else if (loc1 < 4.0 / 6.0) {
-        blue = loc3;
-        red = loc3 * (1 - loc2);
-        green = blue - (loc3 - red) * (6 * loc1 - 3);
-    } else if (loc1 < 5.0 / 6.0) {
-        blue = loc3;
-        green = loc3 * (1 - loc2);
-        red = green + (loc3 - green) * (6 * loc1 - 4);
-    } else {
-        red = loc3;
-        green = loc3 * (1 - loc2);
-        blue = red - (loc3 - green) * (6 * loc1 - 5);
-    }
-    return Color(int(red * 255), int(green * 255), int(blue * 255));
+    return Color(
+        static_cast<int>(r * 255),
+        static_cast<int>(g * 255),
+        static_cast<int>(b * 255)
+    );
 }
 
 std::string Color::toHex()

@@ -285,19 +285,24 @@ function create(currentOutfit, outfitList, mountList, wingList, auraList, shader
   showShaderCheck:setChecked(settings.showShader)
   showBarsCheck:setChecked(settings.showBars)
 
+  local totalRows = 8
+  local totalColumns = 32
   colorBoxGroup = UIRadioGroup.create()
-  for j = 0, 6 do
-    for i = 0, 18 do
+  for row = 0, totalRows - 1 do
+    for col = 0, totalColumns - 1 do
+      local colorId = row * totalColumns + col
+      if colorId > 255 then break end
       local colorBox = g_ui.createWidget("ColorBox", window.appearance.colorBoxPanel)
-      local outfitColor = getOutfitColor(j * 19 + i)
+      local outfitColor = getOutfitColor(colorId)
       colorBox:setImageColor(outfitColor)
-      colorBox:setId("colorBox" .. j * 19 + i)
-      colorBox.colorId = j * 19 + i
+      colorBox:setId("colorBox" .. colorId)
+      colorBox.colorId = colorId
 
       if colorBox.colorId == currentOutfit.head then
         currentColorBox = colorBox
         colorBox:setChecked(true)
       end
+
       colorBoxGroup:addWidget(colorBox)
     end
   end
