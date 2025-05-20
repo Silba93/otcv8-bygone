@@ -26,6 +26,7 @@
 #include <framework/core/clock.h>
 #include <framework/core/eventdispatcher.h>
 #include <framework/graphics/graphics.h>
+const double M_PI = 3.14159265358979323846;
 
 AnimatedText::AnimatedText()
 {
@@ -36,39 +37,70 @@ AnimatedText::AnimatedText()
 void AnimatedText::drawText(const Point& dest, const Rect& visibleRect)
 {
     static float tf = Otc::ANIMATED_TEXT_DURATION;
-    static float tftf = Otc::ANIMATED_TEXT_DURATION * Otc::ANIMATED_TEXT_DURATION;
 
-    Point p = dest;
+    float t = m_animationTimer.ticksElapsed() / 1000.0f; // seconds
+
+    PointF pos(dest.x, dest.y);
+    pos += m_fanDirection * t;
+    pos += PointF(m_offset.x, m_offset.y); // if you still use m_offset
+
     Size textSize = m_cachedText.getTextSize();
-    float t = m_animationTimer.ticksElapsed();
-    p.x -= textSize.width() / 2;
+    Point drawPos(pos.x - textSize.width() / 2, pos.y);
 
-    if(g_game.getFeature(Otc::GameDiagonalAnimatedText)) {
-        p.x -= (4 * t / tf) + (8 * t * t / tftf);
-    }
-
-    p.y += (-48 * t) / tf;
-    p += m_offset;
-    Rect rect(p, textSize);
-
-    if(visibleRect.contains(rect)) {
-        float t0 = tf / 1.2;
+    Rect rect(drawPos, textSize);
+    if (visibleRect.contains(rect)) {
+        float t0 = tf / 1.2f;
         Color color = m_color;
-        if(t > t0) {
-            color.setAlpha((float)(1 - (t - t0) / (tf - t0)));
+        float ticks = m_animationTimer.ticksElapsed();
+
+        if (ticks > t0) {
+            color.setAlpha((float)(1.0f - (ticks - t0) / (tf - t0)));
         }
+
         m_cachedText.draw(rect, color);
     }
 }
+
 
 void AnimatedText::onAppear()
 {
     m_animationTimer.restart();
 
-    // schedule removal
+    // Choose these:
+    float centerAngle = -90.0f;  // 90 = North
+    float spread = -150.0f;      // 180 = east to west spread (half a circle)
+
+    float minAngle = centerAngle - spread / 2.0f;
+    float maxAngle = centerAngle + spread / 2.0f;
+
+    // Random float 0..1
+    float randFraction = std::rand() / (float)RAND_MAX;
+
+    // Random angle within the spread
+    float angle = minAngle + spread * randFraction;
+
+    // Wrap angle between 0° and 360°
+    if (angle < 0.0f)
+        angle += 360.0f;
+    else if (angle >= 360.0f)
+        angle -= 360.0f;
+
+    float radians = angle * M_PI / 180.0f;
+
+    // Random speed between 40 and 60 px/sec
+    float minSpeed = 50.0f;
+    float maxSpeed = 80.0f;
+    float speed = minSpeed + (maxSpeed - minSpeed) * randFraction;
+
+    m_fanDirection.x = std::cos(radians) * speed;
+    m_fanDirection.y = std::sin(radians) * speed;
+
     auto self = asAnimatedText();
     g_dispatcher.scheduleEvent([self]() { g_map.removeThing(self); }, Otc::ANIMATED_TEXT_DURATION);
 }
+
+
+
 
 void AnimatedText::setColor(int color)
 {

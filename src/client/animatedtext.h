@@ -60,6 +60,12 @@ private:
     Timer m_animationTimer;
     CachedText m_cachedText;
     Point m_offset;
+    PointF m_fanDirection;
+    float m_fanSpeed;
+    PointF m_fanDirectionUnit; // direction unit vector
+    float m_startSpeed = 30.0f;   // slow start speed
+    float m_endSpeed = 60.0f;     // double speed at end (2x start)
+
 };
 
 #endif
