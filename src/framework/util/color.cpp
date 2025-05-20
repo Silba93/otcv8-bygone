@@ -51,26 +51,19 @@ Color::Color(const std::string& coltext)
 }
 
 void Color::getSaturationAndIntensity(int row, float &saturation, float &intensity) {
-    // Define saturation and intensity values for each row
-    static const float saturationValues[] = { 0.15f, 0.25f, 0.25f, 0.50f, 0.75f, 1.0f, 1.0f, 1.0f };
-    static const float intensityValues[] = { 1.0f, 1.0f, 0.75f, 0.75f, 0.75f, 1.0f, 0.75f, 0.50f };
+    // Pastel rows: light and low-saturation to high-saturation
+    static const float saturationValues[] = { 0.20f, 0.30f, 0.40f, 0.60f, 0.80f, 1.0f, 1.0f };
+    static const float intensityValues[]  = { 1.0f, 1.0f, 0.95f, 0.90f, 0.85f, 1.0f, 0.75f };
 
-    // Check if row is within bounds
-    if (row >= 0 && row < 8) {
+    if (row >= 0 && row < 7) {
         saturation = saturationValues[row];
         intensity = intensityValues[row];
     } else {
-        // Default to row 7 (maximum saturation, lower intensity)
         saturation = 1.0f;
-        intensity = 0.50f;
-    }
-
-    // Ensure rows 4 or 5 are fully saturated (e.g., red = 255,0,0, cyan = 255,255,0)
-    if (row == 4 || row == 5) {
-        saturation = 1.0f;
-        intensity = 1.0f;
+        intensity = 0.5f;
     }
 }
+
 
 void Color::HSVToRGB(float hue, float saturation, float intensity, float &r, float &g, float &b) {
     if (saturation == 0.0f) {
