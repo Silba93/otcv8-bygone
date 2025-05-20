@@ -87,10 +87,8 @@ void AnimatedText::onAppear()
 
     float radians = angle * M_PI / 180.0f;
 
-    // Random speed between 40 and 60 px/sec
-    float minSpeed = 50.0f;
-    float maxSpeed = 80.0f;
-    float speed = minSpeed + (maxSpeed - minSpeed) * randFraction;
+
+    float speed = 70.0f;
 
     m_fanDirection.x = std::cos(radians) * speed;
     m_fanDirection.y = std::sin(radians) * speed;
