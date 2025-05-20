@@ -102,7 +102,7 @@ Color Color::getOutfitColor(int color) {
     int column = color % stepsPerColumn;
     int row = color / stepsPerColumn;
 
-    float hue = column / 31.0f; // Full hue cycle over 32 steps
+    float hue = column / 32.0f; // Full hue cycle over 32 steps
 
     // Define saturation and intensity based on row
     float saturation, intensity;
