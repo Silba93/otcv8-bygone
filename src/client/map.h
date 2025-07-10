@@ -300,6 +300,9 @@ private:
     stdext::packed_storage<uint8> m_attribs;
     AwareRange m_awareRange;
     static TilePtr m_nulltile;
+    void handleAnimatedText(const ThingPtr& thing, const Position& pos);
+    void handleStaticText(const ThingPtr& thing, const Position& pos);
+    void callLuaEventsForThing(const ThingPtr& thing);
 };
 
 extern Map g_map;

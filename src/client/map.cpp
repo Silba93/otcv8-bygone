@@ -120,78 +120,129 @@ void Map::cleanTexts()
 
 void Map::addThing(const ThingPtr& thing, const Position& pos, int stackPos)
 {
-    if(!thing)
+    // Early return if thing is null
+    if (!thing)
         return;
 
-    if(thing->isItem() || thing->isCreature() || thing->isEffect()) {
+    // Handle standard map objects (items, creatures, effects)
+    if (thing->isItem() || thing->isCreature() || thing->isEffect()) {
         const TilePtr& tile = getOrCreateTile(pos);
-        if(tile)
+        if (tile) {
             tile->addThing(thing, stackPos);
-    } else {
-        if(thing->isMissile()) {
+        }
+    } 
+    // Handle special map objects (missiles, animated text, static text)
+    else {
+        // Handle missiles by adding them to the floor missile list
+        if (thing->isMissile()) {
             m_floorMissiles[pos.z].push_back(thing->static_self_cast<Missile>());
-        } else if(thing->isAnimatedText()) {
-            // this code will stack animated texts of the same color
-            AnimatedTextPtr animatedText = thing->static_self_cast<AnimatedText>();
-
-            AnimatedTextPtr prevAnimatedText;
-            bool merged = false;
-			for (auto other : m_animatedTexts) {
-				if (other->getPosition() == pos) {
-					prevAnimatedText = other;
-					if (!g_game.getFeature(Otc::GameDontMergeAnimatedText)) {
-						if (other->merge(animatedText)) {
-							merged = true;
-							break;
-						}
-					}
-				}
-			}
-
-            if(!merged) {
-                if(prevAnimatedText) {
-                    Point offset = prevAnimatedText->getOffset();
-                    float t = prevAnimatedText->getTimer().ticksElapsed();
-                    int y = 48 * t / (float)Otc::ANIMATED_TEXT_DURATION;
-                    offset -= Point(0, y);
-                    offset.y = std::min<int>(std::max<int>(0, offset.y + 12), 24);
-                    animatedText->setOffset(offset);
-                }
-                m_animatedTexts.push_back(animatedText);
-            }
-        } else if(thing->isStaticText()) {
-            StaticTextPtr staticText = thing->static_self_cast<StaticText>();
-
-            bool mustAdd = true;
-            for(auto other : m_staticTexts) {
-                // try to combine messages
-                if(other->getPosition() == pos && other->addColoredMessage(staticText->getName(), staticText->getMessageMode(), staticText->getFirstMessage())) {
-                    mustAdd = false;
-                    break;
-                }
-            }
-
-            if(mustAdd)
-                m_staticTexts.push_back(staticText);
-            else
-                return;
+        } 
+        // Handle animated text with special merging logic
+        else if (thing->isAnimatedText()) {
+            handleAnimatedText(thing, pos);
+        } 
+        // Handle static text with message combining logic
+        else if (thing->isStaticText()) {
+            handleStaticText(thing, pos);
         }
 
+        // Set position and trigger appear event
         thing->setPosition(pos);
         thing->onAppear();
 
-        if (thing->isMissile()) {
-            g_lua.callGlobalField("g_map", "onMissle", thing);
-        } else if (thing->isAnimatedText()) {
-            AnimatedTextPtr animatedText = thing->static_self_cast<AnimatedText>();
-            g_lua.callGlobalField("g_map", "onAnimatedText", thing, animatedText->getText());
-        } else if (thing->isStaticText()) {
-            StaticTextPtr staticText = thing->static_self_cast<StaticText>();
-            g_lua.callGlobalField("g_map", "onStaticText", thing, staticText->getText());
-        }
-    } 
+        // Call Lua event handlers based on thing type
+        callLuaEventsForThing(thing);
+    }
 
+    // Notify any listeners about the tile update
     notificateTileUpdate(pos, thing->isItem());
+}
+
+/**
+ * Handles adding animated text with merging and offset logic
+ */
+void Map::handleAnimatedText(const ThingPtr& thing, const Position& pos)
+{
+    AnimatedTextPtr animatedText = thing->static_self_cast<AnimatedText>();
+    AnimatedTextPtr prevAnimatedText;
+    bool merged = false;
+
+    // Check for existing animated texts at this position
+    for (auto other : m_animatedTexts) {
+        if (other->getPosition() == pos) {
+            prevAnimatedText = other;
+            
+            // Merge if feature flag allows it
+            if (!g_game.getFeature(Otc::GameDontMergeAnimatedText)) {
+                if (other->merge(animatedText)) {
+                    merged = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // If not merged, calculate vertical offset and add to list
+    if (!merged) {
+        if (prevAnimatedText) {
+            // Calculate offset based on previous text's timer progress
+            Point offset = prevAnimatedText->getOffset();
+            float t = prevAnimatedText->getTimer().ticksElapsed();
+            int y = 48 * t / (float)Otc::ANIMATED_TEXT_DURATION;
+            offset -= Point(0, y);
+            
+            // Clamp Y offset between 0-24 pixels
+            offset.y = std::min<int>(std::max<int>(0, offset.y + 12), 24);
+            animatedText->setOffset(offset);
+        }
+        m_animatedTexts.push_back(animatedText);
+    }
+}
+
+/**
+ * Handles adding static text with message combining logic
+ */
+void Map::handleStaticText(const ThingPtr& thing, const Position& pos)
+{
+    StaticTextPtr staticText = thing->static_self_cast<StaticText>();
+    bool mustAdd = true;
+
+    // Check for existing static texts at this position
+    for (auto other : m_staticTexts) {
+        // Try to combine messages if at same position
+        if (other->getPosition() == pos && 
+            other->addColoredMessage(staticText->getName(), 
+                                    staticText->getMessageMode(), 
+                                    staticText->getFirstMessage())) {
+            mustAdd = false;
+            break;
+        }
+    }
+
+    // Add to list only if couldn't combine with existing text
+    if (mustAdd) {
+        m_staticTexts.push_back(staticText);
+    } else {
+        return; // Skip further processing if text was combined
+    }
+}
+
+/**
+ * Calls appropriate Lua event handlers based on thing type
+ */
+void Map::callLuaEventsForThing(const ThingPtr& thing)
+{
+    if (thing->isMissile()) {
+        g_lua.callGlobalField("g_map", "onMissle", thing);
+    } 
+    else if (thing->isAnimatedText()) {
+        AnimatedTextPtr animatedText = thing->static_self_cast<AnimatedText>();
+        g_lua.callGlobalField("g_map", "onAnimatedText", thing, animatedText->getText());
+    } 
+    else if (thing->isStaticText()) {
+        StaticTextPtr staticText = thing->static_self_cast<StaticText>();
+        g_lua.callGlobalField("g_map", "onStaticText", thing, staticText->getText());
+    }
 }
 
 void Map::setTileSpeed(const Position& pos, uint16_t speed, uint8_t blocking) {
