@@ -125,7 +125,7 @@ SelectionButton < Panel
     text-wrap: true
 
 OutfitWindow < MainWindow
-  size: 735 560
+  size: 835 560
   text: Customise Character
   color: #929292
   @onEnter: modules.game_outfit.accept()
@@ -135,7 +135,7 @@ OutfitWindow < MainWindow
     id: preview
     anchors.top: parent.top
     anchors.left: parent.left
-    size: 469 220
+    size: 569 220
     text: Preview
 
     Panel
@@ -581,25 +581,25 @@ OutfitWindow < MainWindow
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.bottom: next.top
-      margin-top: 3
-      margin-bottom: 3
+      margin-top: 8
+      margin-bottom: 8
       layout: horizontalBox
 
       ButtonBox
         id: head
-        width: 80
+        width: 104
         text: Head
       ButtonBox
         id: primary
-        width: 80
+        width: 104
         text: Primary
       ButtonBox
         id: secondary
-        width: 80
+        width: 104
         text: Secondary
       ButtonBox
         id: detail
-        width: 81
+        width: 103
         text: Detail
 
     Panel
@@ -607,13 +607,13 @@ OutfitWindow < MainWindow
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.bottom: parent.bottom
-      height: 117
+      height: 100
       layout:
         type: grid
-        cell-size: 15 15
-        cell-spacing: 2
-        num-columns: 19
-        num-lines: 7
+        cell-size: 12 12
+        cell-spacing: 1
+        num-columns: 32
+        num-lines: 8
 
   MiniPanel
     id: presetButtons

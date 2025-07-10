@@ -131,6 +131,6 @@ ipch/
 # ReSharper is a .NET coding add-in
 _ReSharper*/
 *.[Rr]e[Ss]harper
-*.lastbuildstate
 .vscode/settings.json
-/vc17/otclient/DirectX
+*.lastbuildstate
+/vc17/otclient/DirectX/otclient.tlog
